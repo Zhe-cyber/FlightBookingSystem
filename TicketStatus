@@ -1,0 +1,96 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
+ */
+package flightticketbookingsystem;
+
+/**
+ *
+ * @author User
+ */
+import java.util.*;
+public class TicketStatus {
+    // List for confirmed tickets
+    private List<Map<String, String>> confirmedTickets = new ArrayList<>();
+    // Queue for waiting list
+    private Queue<Map<String, String>> waitingList = new LinkedList<>();
+
+    // Method to add a confirmed ticket
+    public void addConfirmedTicket(String ticketID, String name, String flightNumber) {
+        Map<String, String> ticket = new HashMap<>();
+        ticket.put("ticketID", ticketID);
+        ticket.put("name", name);
+        ticket.put("flightNumber", flightNumber);
+        confirmedTickets.add(ticket);
+    }
+
+    // Method to add a ticket to the waiting list
+    public void addToWaitingList(String ticketID, String name, String flightNumber) {
+        Map<String, String> ticket = new HashMap<>();
+        ticket.put("ticketID", ticketID);
+        ticket.put("name", name);
+        ticket.put("flightNumber", flightNumber);
+        waitingList.add(ticket);
+    }
+
+    // Method to view ticket status
+    public String viewTicketStatus(String ticketID) {
+        // Check in confirmed tickets
+        for (Map<String, String> ticket : confirmedTickets) {
+            if (ticket.get("ticketID").equals(ticketID)) {
+                return "Status: Confirmed\nPassenger: " + ticket.get("name") +
+                       "\nFlight: " + ticket.get("flightNumber");
+            }
+        }
+
+        // Check in waiting list
+        int position = 1;
+        for (Map<String, String> ticket : waitingList) {
+            if (ticket.get("ticketID").equals(ticketID)) {
+                return "Status: Waiting\nPassenger: " + ticket.get("name") +
+                       "\nFlight: " + ticket.get("flightNumber") +
+                       "\nPosition in queue: " + position;
+            }
+            position++;
+        }
+
+        // If not found
+        return "No such ticket exists.";
+    }
+
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+       
+        TicketStatus system = new TicketStatus();
+
+        // Adding some tickets
+        system.addConfirmedTicket("101", "John Doe", "F123");
+        system.addToWaitingList("102", "Jane Smith", "F123");
+        system.addToWaitingList("103", "Alice Brown", "F124");
+
+        // Viewing ticket statuses
+        String ticketID;
+        do{
+        System.out.println("Please enter the ticket ID (enter '0' to exit)");
+        Scanner sc= new Scanner(System.in);
+        ticketID=sc.nextLine();
+        
+        if(ticketID.equals("0")){
+            System.out.println("Exiting....");
+            break;
+        }
+        System.out.println(system.viewTicketStatus(ticketID));
+        
+        }
+        while(true);
+        
+    
+    }
+}
+
+    
+    
+
