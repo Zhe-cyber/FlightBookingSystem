@@ -1,1 +1,102 @@
+package flightticketbooking; 
 
+import java.util.ArrayList; 
+import java.util.List; 
+import java.util.Scanner; 
+
+
+class Ticket {
+    private String name; // passenger name
+    private String passportNumber; // passenger passport number
+
+    // Constructor
+    public Ticket(String name, String passportNumber) {
+        this.name = name; // initialize name
+        this.passportNumber = passportNumber; // initialize passport number
+    }
+
+    public String getName() {
+        return name; 
+    }
+
+    public void setName(String name) {
+        this.name = name; 
+    }
+
+    public String getPassportNumber() {
+        return passportNumber; 
+    }
+
+    public void setPassportNumber(String passportNumber) {
+        this.passportNumber = passportNumber; 
+    }
+
+    // override toString method for printing ticket details
+    @Override
+    public String toString() {
+        return "Name: " + name + ", Passport Number: " + passportNumber; // format ticket details as a string
+    }
+}
+
+// main class for the flight ticket booking system
+public class FlightTicketBooking {
+
+    public static void main(String[] args) {
+        List<Ticket> confirmedTickets = new ArrayList<>(); // create a list to hold confirmed tickets
+
+        // sample tickets to the list for testing
+        confirmedTickets.add(new Ticket("Alice", "A12345"));
+        confirmedTickets.add(new Ticket("Bob", "B67890"));
+
+        // call the method to edit ticket information
+        editTicketInformation(confirmedTickets); // edit a ticket in the list
+    }
+
+    // edit ticket information method
+    public static void editTicketInformation(List<Ticket> confirmedTickets) {
+        Scanner scanner = new Scanner(System.in); // create a Scanner object for user input
+
+        // prompt user for ticket identifier (e.g., passport number)
+        System.out.print("Enter the passport number of the ticket to edit: "); // ask the user for the passport number of the ticket
+        String passportNumber = scanner.nextLine(); // read the passport number entered by the user
+
+        // search for the ticket in the confirmed list
+        Ticket ticketToEdit = null; // initialize a variable to store the ticket to be edited
+        for (Ticket ticket : confirmedTickets) { // loop through the list of confirmed tickets
+            if (ticket.getPassportNumber().equals(passportNumber)) { // check if the ticket's passport number matches the input
+                ticketToEdit = ticket; // assign the matching ticket to the variable
+                break; // exit the loop since the ticket is found
+            }
+        }
+
+        // if the ticket is not found
+        if (ticketToEdit == null) { // check if no ticket was found
+            System.out.println("Ticket not found. Please check the passport number."); // notify the user
+            return; // exit the method
+        }
+
+        // show current details and prompt for updates
+        System.out.println("Current Ticket Details:"); // inform the user about the ticket's current details
+        System.out.println(ticketToEdit); // print the current details of the ticket
+
+        System.out.println("\nEnter new details (leave blank to keep current):"); // prompt the user for new details
+
+        // update name
+        System.out.print("New Name: "); // ask for the new name
+        String newName = scanner.nextLine(); // read the new name entered by the user
+        if (!newName.isEmpty()) { // check if the user entered something
+            ticketToEdit.setName(newName); // update the ticket's name
+        }
+
+        // update passport number
+        System.out.print("New Passport Number: "); // ask for the new passport number
+        String newPassportNumber = scanner.nextLine(); // read the new passport number entered by the user
+        if (!newPassportNumber.isEmpty()) { // check if the user entered something
+            ticketToEdit.setPassportNumber(newPassportNumber); // update the ticket's passport number
+        }
+
+        // confirm updates
+        System.out.println("Ticket updated successfully:"); // notify the user about the successful update
+        System.out.println(ticketToEdit); // print the updated details of the ticket
+    }
+}
