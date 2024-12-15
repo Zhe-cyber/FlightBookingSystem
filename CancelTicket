@@ -1,0 +1,52 @@
+import java.util.*;
+
+public class CancelTicket {
+
+    public static void cancelTicket(List<Ticket> confirmedTickets, Queue<Ticket> waitingList) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter the passport number of the ticket to cancel: ");
+        String passportNumber = scanner.nextLine();
+
+        Ticket ticketToCancel = null;
+        for (Ticket ticket : confirmedTickets) {
+            if (ticket.getPassportNumber().equals(passportNumber)) {
+                ticketToCancel = ticket;
+                break;
+            }
+        }
+
+        if (ticketToCancel == null) {
+            System.out.println("Ticket not found in the confirmed list. Please check the passport number.");
+            return;
+        }
+
+        confirmedTickets.remove(ticketToCancel);
+        System.out.println("Ticket canceled successfully: " + ticketToCancel);
+
+        if (!waitingList.isEmpty()) {
+            Ticket nextTicket = waitingList.poll();
+            confirmedTickets.add(nextTicket);
+            System.out.println("Moved ticket from waiting list to confirmed: " + nextTicket);
+        }
+    }
+
+    public static void main(String[] args) {
+        List<Ticket> confirmedTickets = new ArrayList<>();
+        Queue<Ticket> waitingList = new LinkedList<>();
+
+        confirmedTickets.add(new Ticket("Alice", "A12345"));
+        confirmedTickets.add(new Ticket("Bob", "B67890"));
+
+        waitingList.add(new Ticket("Charlie", "C54321"));
+        waitingList.add(new Ticket("Diana", "D98765"));
+
+        System.out.println("Confirmed Tickets: " + confirmedTickets);
+        System.out.println("Waiting List: " + waitingList);
+
+        cancelTicket(confirmedTickets, waitingList);
+
+        System.out.println("\nUpdated Confirmed Tickets: " + confirmedTickets);
+        System.out.println("Updated Waiting List: " + waitingList);
+    }
+}
