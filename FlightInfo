@@ -1,0 +1,117 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package flightticketbookingsystem;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+import javax.swing.table.DefaultTableModel;
+
+public class FlightInfo extends JFrame {
+
+    public FlightInfo() {
+        // Set up frame properties
+        getContentPane().setBackground(Color.WHITE);
+        setLayout(null);
+
+        // Label for user instruction
+        JLabel label = new JLabel("Enter Start Date (YYYY-MM-DD):");
+        label.setBounds(20, 20, 200, 30);
+        add(label);
+
+        // Text field for start date
+        JTextField startDateField = new JTextField();
+        startDateField.setBounds(220, 20, 150, 30);
+        add(startDateField);
+
+        // Label for end date
+        JLabel labelEnd = new JLabel("Enter End Date (YYYY-MM-DD):");
+        labelEnd.setBounds(20, 60, 200, 30);
+        add(labelEnd);
+
+        // Text field for end date
+        JTextField endDateField = new JTextField();
+        endDateField.setBounds(220, 60, 150, 30);
+        add(endDateField);
+
+        // Button to search flights
+        JButton searchButton = new JButton("Search Flights");
+        searchButton.setBounds(400, 40, 150, 30);
+        add(searchButton);
+
+        // Table to display flight details
+        JTable table = new JTable();
+        JScrollPane jsp = new JScrollPane(table);
+        jsp.setBounds(20, 100, 750, 350);
+        add(jsp);
+
+        // Action listener for search button
+        searchButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+                String startDate = startDateField.getText();
+                String endDate = endDateField.getText();
+
+                if (startDate.isEmpty() || endDate.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Please enter both start and end dates.");
+                    return;
+                }
+
+                // Clear existing rows in the table
+                DefaultTableModel model = (DefaultTableModel) table.getModel();
+                model.setRowCount(0);
+
+                try {
+                    // Connect to the database
+                    connSql conn = new connSql();
+
+                    // Query to get flights within the date range
+                    String query = "SELECT * FROM flight WHERE flight_date BETWEEN ? AND ?";
+                    PreparedStatement pst = conn.c.prepareStatement(query);
+                    pst.setString(1, startDate);
+                    pst.setString(2, endDate);
+
+                    ResultSet rs = pst.executeQuery();
+
+                    // Add flight data to the table
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
+
+                    // Set table column names dynamically
+                    DefaultTableModel tableModel = new DefaultTableModel();
+                    for (int i = 1; i <= columnCount; i++) {
+                        tableModel.addColumn(metaData.getColumnName(i));
+                    }
+                    table.setModel(tableModel);
+
+                    // Add rows to the table
+                    while (rs.next()) {
+                        Object[] row = new Object[columnCount];
+                        for (int i = 1; i <= columnCount; i++) {
+                            row[i - 1] = rs.getObject(i);
+                        }
+                        tableModel.addRow(row);
+                    }
+
+                    // Close resources
+                    rs.close();
+                    pst.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "Error fetching flight data.");
+                }
+            }
+        });
+
+        // Set frame properties
+        setSize(800, 500);
+        setLocation(400, 200);
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        new FlightInfo();
+    }
+}
