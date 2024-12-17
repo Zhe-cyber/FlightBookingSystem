@@ -1,0 +1,207 @@
+package flightticketbookingsystem;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
+public class bookTicket extends JFrame implements ActionListener {
+
+    JTextField tfPassport, tfDate;
+    JLabel tfName, tfNationality, tfAddress, labelGender, labelFlightName, labelFlightCode;
+    JButton bookFlight, fetchButton;
+    String source = "Kuala Lumpur";  // Hardcoded source
+    String destination = "Singapore";  // Hardcoded destination
+
+    public bookTicket() {
+        getContentPane().setBackground(Color.WHITE);
+        setLayout(null);
+
+        JLabel heading = new JLabel("Book Flight");
+        heading.setBounds(420, 20, 500, 35);
+        heading.setFont(new Font("Tahoma", Font.PLAIN, 32));
+        heading.setForeground(Color.BLUE);
+        add(heading);
+
+        // Passport Number
+        JLabel lblPassport = new JLabel("Passport Number");
+        lblPassport.setBounds(60, 80, 150, 25);
+        lblPassport.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblPassport);
+
+        tfPassport = new JTextField();
+        tfPassport.setBounds(220, 80, 150, 25);
+        add(tfPassport);
+
+        fetchButton = new JButton("Fetch User");
+        fetchButton.setBackground(Color.BLACK);
+        fetchButton.setForeground(Color.WHITE);
+        fetchButton.setBounds(380, 80, 120, 25);
+        fetchButton.addActionListener(this);
+        add(fetchButton);
+
+        // Name
+        JLabel lblName = new JLabel("Name");
+        lblName.setBounds(60, 130, 150, 25);
+        lblName.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblName);
+
+        tfName = new JLabel();
+        tfName.setBounds(220, 130, 150, 25);
+        add(tfName);
+
+        // Nationality
+        JLabel lblNationality = new JLabel("Nationality");
+        lblNationality.setBounds(60, 180, 150, 25);
+        lblNationality.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblNationality);
+
+        tfNationality = new JLabel();
+        tfNationality.setBounds(220, 180, 150, 25);
+        add(tfNationality);
+
+        // Address
+        JLabel lblAddress = new JLabel("Address");
+        lblAddress.setBounds(60, 230, 150, 25);
+        lblAddress.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblAddress);
+
+        tfAddress = new JLabel();
+        tfAddress.setBounds(220, 230, 150, 25);
+        add(tfAddress);
+
+        // Gender
+        JLabel lblGender = new JLabel("Gender");
+        lblGender.setBounds(60, 280, 150, 25);
+        lblGender.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblGender);
+
+        labelGender = new JLabel();
+        labelGender.setBounds(220, 280, 150, 25);
+        add(labelGender);
+
+        // Remove Source and Destination Choices
+        JLabel lblSource = new JLabel("Source: " + source);  // Hardcoded source
+        lblSource.setBounds(60, 330, 150, 25);
+        lblSource.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblSource);
+
+        JLabel lblDestination = new JLabel("Destination: " + destination);  // Hardcoded destination
+        lblDestination.setBounds(60, 380, 150, 25);
+        lblDestination.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblDestination);
+
+        // Date of Travel
+        JLabel lblDate = new JLabel("Date of Travel (YYYY-MM-DD):");
+        lblDate.setBounds(60, 530, 200, 25);
+        lblDate.setFont(new Font("Tahoma", Font.PLAIN, 16));
+        add(lblDate);
+
+        tfDate = new JTextField();
+        tfDate.setBounds(270, 530, 150, 25);
+        add(tfDate);
+
+        // Book Flight Button
+        bookFlight = new JButton("Book Flight");
+        bookFlight.setBackground(Color.BLACK);
+        bookFlight.setForeground(Color.WHITE);
+        bookFlight.setBounds(220, 580, 150, 25);
+        bookFlight.addActionListener(this);
+        add(bookFlight);
+
+        setSize(1100, 700);
+        setLocation(200, 50);
+        setVisible(true);
+    }
+
+    public void actionPerformed(ActionEvent ae) {
+        if (ae.getSource() == fetchButton) {
+            // Fetch passenger information
+            String passport = tfPassport.getText();
+            try {
+                connSql conn = new connSql();
+                String query = "SELECT * FROM passenger WHERE passport_number = ?";
+                PreparedStatement pst = conn.c.prepareStatement(query);
+                pst.setString(1, passport);
+                ResultSet rs = pst.executeQuery();
+
+                if (rs.next()) {
+                    tfName.setText(rs.getString("name"));
+                    tfNationality.setText(rs.getString("nationality"));
+                    tfAddress.setText(rs.getString("address"));
+                    labelGender.setText(rs.getString("gender"));
+                } else {
+                    JOptionPane.showMessageDialog(null, "No user found with this Passport Number.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (ae.getSource() == bookFlight) {
+            // Book ticket
+            String passport = tfPassport.getText();
+            String name = tfName.getText();
+            String travelDate = tfDate.getText();
+
+            // Validate date format
+            try {
+                LocalDate.parse(travelDate); // Throws an exception if the format is invalid
+            } catch (DateTimeParseException e) {
+                JOptionPane.showMessageDialog(null, "Please enter the date in YYYY-MM-DD format.");
+                return;
+            }
+
+            try {
+                connSql conn = new connSql();
+                // Check seat availability
+                String seatQuery = "SELECT flight_id, vacant_seat FROM flight WHERE source = ? AND destination = ?";
+                PreparedStatement seatPst = conn.c.prepareStatement(seatQuery);
+                seatPst.setString(1, source);  // Hardcoded source
+                seatPst.setString(2, destination);  // Hardcoded destination
+                ResultSet rs = seatPst.executeQuery();
+
+                if (rs.next() && rs.getInt("vacant_seat") > 0) {
+                    int flightId = rs.getInt("flight_id");
+                    String insertQuery = "INSERT INTO reservation (PNR, passenger_id, flight_id, ticket_status) VALUES (?, ?, ?, ?)";
+                    PreparedStatement insertPst = conn.c.prepareStatement(insertQuery);
+                    String PNR = "PNR" + System.currentTimeMillis();
+                    PNR = PNR.substring(0, 15); // Trim to 15 characters
+                    insertPst.setString(1, PNR);
+
+                    // Fetch passenger_id using passport_number
+                    String fetchPassengerIdQuery = "SELECT passenger_id FROM passenger WHERE passport_number = ?";
+                    PreparedStatement fetchPst = conn.c.prepareStatement(fetchPassengerIdQuery);
+                    fetchPst.setString(1, passport);
+                    ResultSet passengerRs = fetchPst.executeQuery();
+
+                    if (passengerRs.next()) {
+                        int passengerId = passengerRs.getInt("passenger_id");
+                        insertPst.setInt(2, passengerId);  // Set the auto-generated passenger_id
+                        insertPst.setInt(3, flightId);
+                        insertPst.setString(4, "Confirmed");
+                        insertPst.executeUpdate();
+
+                        // Update vacant seats
+                        String updateQuery = "UPDATE flight SET vacant_seat = vacant_seat - 1 WHERE flight_id = ?";
+                        PreparedStatement updatePst = conn.c.prepareStatement(updateQuery);
+                        updatePst.setInt(1, flightId);
+                        updatePst.executeUpdate();
+
+                        JOptionPane.showMessageDialog(null, "Ticket Booked Successfully! PNR: " + PNR);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Passenger not found.");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "No seats available for the selected flight.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        new bookTicket();
+    }
+}
