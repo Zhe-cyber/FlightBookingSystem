@@ -1,52 +1,194 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
 import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
 
-public class CancelTicket {
+public class cancel extends JFrame {
 
-    public static void cancelTicket(List<Ticket> confirmedTickets, Queue<Ticket> waitingList) {
-        Scanner scanner = new Scanner(System.in);
+    private JTextField pnrTextField;
+    private JButton cancelButton;
+    private JTextArea resultTextArea;
 
-        System.out.print("Enter the passport number of the ticket to cancel: ");
-        String passportNumber = scanner.nextLine();
+    public cancel() {
+        // Setup the frame
+        setTitle("Cancel Ticket");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
 
-        Ticket ticketToCancel = null;
-        for (Ticket ticket : confirmedTickets) {
-            if (ticket.getPassportNumber().equals(passportNumber)) {
-                ticketToCancel = ticket;
-                break;
+        // Initialize components
+        pnrTextField = new JTextField(15);
+        cancelButton = new JButton("Cancel Ticket");
+        resultTextArea = new JTextArea(10, 30);
+        resultTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(resultTextArea);
+
+        // Create the panel for user input
+        JPanel inputPanel = new JPanel();
+        inputPanel.add(new JLabel("Enter PNR:"));
+        inputPanel.add(pnrTextField);
+        inputPanel.add(cancelButton);
+
+        // Add components to the frame
+        add(inputPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Button action listener
+        cancelButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+                cancelTicket(ae);
             }
-        }
+        });
 
-        if (ticketToCancel == null) {
-            System.out.println("Ticket not found in the confirmed list. Please check the passport number.");
+        // Make the frame visible
+        setVisible(true);
+    }
+
+    private void cancelTicket(ActionEvent ae) {
+        String enteredPNR = pnrTextField.getText().trim();
+
+        if (enteredPNR.isEmpty()) {
+            resultTextArea.setText("Please enter a PNR.");
             return;
         }
 
-        confirmedTickets.remove(ticketToCancel);
-        System.out.println("Ticket canceled successfully: " + ticketToCancel);
+        try {
+            // Read reservation and confirmed tickets
+            BufferedReader reservationReader = new BufferedReader(new FileReader("reservation.txt"));
+            BufferedReader confirmedReader = new BufferedReader(new FileReader("confirmed_tickets.txt"));
 
-        if (!waitingList.isEmpty()) {
-            Ticket nextTicket = waitingList.poll();
-            confirmedTickets.add(nextTicket);
-            System.out.println("Moved ticket from waiting list to confirmed: " + nextTicket);
+            List<String> reservationLines = new ArrayList<>();
+            List<String> confirmedLines = new ArrayList<>();
+            String line;
+            String canceledFlight = null;
+
+            // Read reservation.txt into a list
+            while ((line = reservationReader.readLine()) != null) {
+                reservationLines.add(line);
+                // Check if the PNR matches the entered PNR
+                String[] fields = line.split("\\|");
+                if (fields[2].equals(enteredPNR)) {
+                    canceledFlight = fields[1]; // Get the flight number of the canceled ticket
+                }
+            }
+
+            // Read confirmed_tickets.txt into a list
+            while ((line = confirmedReader.readLine()) != null) {
+                confirmedLines.add(line);
+            }
+
+            boolean found = false;
+            // Find and cancel the ticket
+            for (int i = 0; i < reservationLines.size(); i++) {
+                String[] fields = reservationLines.get(i).split("\\|");
+                if (fields[2].equals(enteredPNR)) {
+                    // Mark the ticket as cancelled
+                    fields[7] = "Cancelled";
+                    reservationLines.set(i, String.join("|", fields)); // Update reservation list
+
+                    // Remove from confirmed tickets
+                    for (int j = 0; j < confirmedLines.size(); j++) {
+                        String[] confirmedFields = confirmedLines.get(j).split("\\|");
+                        if (confirmedFields[2].equals(enteredPNR)) {
+                            confirmedLines.remove(j); // Remove the cancelled ticket
+                            break;
+                        }
+                    }
+
+                    found = true;
+                    resultTextArea.setText("Ticket successfully cancelled.");
+                    break;
+                }
+            }
+
+            if (!found) {
+                resultTextArea.setText("No ticket found with the entered PNR.");
+                reservationReader.close();
+                confirmedReader.close();
+                return;
+            }
+
+            // Check waiting list for users waiting for the same flight
+            if (canceledFlight != null) {
+                Queue<String> waitingQueue = new LinkedList<>();
+                BufferedReader waitingReader = new BufferedReader(new FileReader("waiting_list.txt"));
+
+                while ((line = waitingReader.readLine()) != null) {
+                    waitingQueue.offer(line); // Add users to the queue
+                }
+
+                boolean userFound = false;
+                // Search for a user in the waiting list for the canceled flight
+                while (!waitingQueue.isEmpty()) {
+                    String waitingUserLine = waitingQueue.poll(); // Get and remove the first user from the queue
+                    String[] waitingUser = waitingUserLine.split("\\|");
+                    if (waitingUser[1].equals(canceledFlight)) {
+                        // Generate a new PNR for the waiting user
+                        String waitingUserPNR = generatePNR();
+
+                        // Move the first user to confirmed status
+                        String confirmedTicket = String.join("|", waitingUser[0], waitingUser[1], waitingUserPNR, waitingUser[2], waitingUser[3], waitingUser[4], waitingUser[5], "Confirmed");
+
+                        // Add the new confirmed ticket to reservation.txt and confirmed_tickets.txt
+                        reservationLines.add(confirmedTicket); // Add to reservation
+                        confirmedLines.add(confirmedTicket); // Add to confirmed tickets
+
+                        userFound = true;
+                        resultTextArea.setText("Waiting list updated: " + waitingUser[2] + " moved to confirmed status.");
+
+                        break;
+                    }
+                }
+
+                if (!userFound) {
+                    resultTextArea.setText("No users on the waiting list for this flight.");
+                }
+
+                // Write the updated reservation.txt, confirmed_tickets.txt, and waiting_list.txt
+                BufferedWriter reservationWriter = new BufferedWriter(new FileWriter("reservation.txt"));
+                BufferedWriter confirmedWriter = new BufferedWriter(new FileWriter("confirmed_tickets.txt"));
+                BufferedWriter waitingWriter = new BufferedWriter(new FileWriter("waiting_list.txt"));
+
+                // Write updated data back to the files
+                for (String updatedLine : reservationLines) {
+                    reservationWriter.write(updatedLine + "\n");
+                }
+                for (String updatedLine : confirmedLines) {
+                    confirmedWriter.write(updatedLine + "\n");
+                }
+
+                // Write the remaining waiting list (users that are still waiting)
+                for (String waitingUserLine : waitingQueue) {
+                    waitingWriter.write(waitingUserLine + "\n");
+                }
+
+                reservationWriter.close();
+                confirmedWriter.close();
+                waitingWriter.close();
+            }
+
+            reservationReader.close();
+            confirmedReader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            resultTextArea.setText("Error processing the files.");
         }
     }
 
+    // Generate a new PNR (for example, a simple approach)
+    private String generatePNR() {
+        Random random = new Random();
+        return "PNR" + (100000000 + random.nextInt(900000000));
+    }
+
     public static void main(String[] args) {
-        List<Ticket> confirmedTickets = new ArrayList<>();
-        Queue<Ticket> waitingList = new LinkedList<>();
-
-        confirmedTickets.add(new Ticket("Alice", "A12345"));
-        confirmedTickets.add(new Ticket("Bob", "B67890"));
-
-        waitingList.add(new Ticket("Charlie", "C54321"));
-        waitingList.add(new Ticket("Diana", "D98765"));
-
-        System.out.println("Confirmed Tickets: " + confirmedTickets);
-        System.out.println("Waiting List: " + waitingList);
-
-        cancelTicket(confirmedTickets, waitingList);
-
-        System.out.println("\nUpdated Confirmed Tickets: " + confirmedTickets);
-        System.out.println("Updated Waiting List: " + waitingList);
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                new cancel();
+            }
+        });
     }
 }
